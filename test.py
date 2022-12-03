@@ -1,3 +1,3 @@
 from slugify import slugify 
 
-print(slugify("Meet's Marriage Proposal for Manushi"))
+print(slugify("Naagin ploys killers against each other"))

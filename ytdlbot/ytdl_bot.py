@@ -7,8 +7,10 @@
 
 __author__ = "Benny <benny.think@gmail.com>"
 
+import ast
 import asyncio
 import contextlib
+import json
 import logging
 import os
 import random
@@ -112,10 +114,11 @@ def private_use(func):
             return
 
         # authorized users check
-        users = [int(i) for i in AUTHORIZED_USER.split(",")] if AUTHORIZED_USER else []
-        if users and chat_id and chat_id not in users:
-            message.reply_text(bot_text.private, quote=True)
-            return
+        if AUTHORIZED_USER:
+            users = [int(i) for i in AUTHORIZED_USER.split(",")] if AUTHORIZED_USER else []
+            if users and chat_id and chat_id not in users:
+                message.reply_text(bot_text.private, quote=True)
+                return
 
         # membership check
         if REQUIRED_MEMBERSHIP:
@@ -341,6 +344,17 @@ def playlist_handler(client: "Client", message: "types.Message"):
                     res = res.decode("utf-8")
                     slug = slugify(res)
                     link = f'{input_link}/{slug}/{link.replace("zee5:", "")}'
+                elif "voot" in link:
+                    shell_cmd = f"yt-dlp --dump-json {link} --user-agent 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36'"
+                    res = subprocess.run(shell_cmd, capture_output=True, shell=True)
+                    res = res.stdout
+                    res = res.decode("utf-8")
+                    res = json.loads(res)
+                    slug = slugify(res["episode"])
+                    season_number = res["season_number"]
+                    series = res["series"].lower()
+                    code = link.replace("voot:", "")
+                    link = f"https://www.voot.com/shows/{series}/{season_number}/{code}/{slug}/{code}"
 
                 editable.edit(f'Downloading {i + 1 + start} of {playlist_links_len}\n\n{link}', disable_web_page_preview=True)
 
