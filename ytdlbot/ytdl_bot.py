@@ -14,11 +14,12 @@ import os
 import random
 import re
 import subprocess
+import sys
 import time
 import traceback
 import typing
 from io import BytesIO
-
+from slugify import slugify
 import pyrogram.errors
 from apscheduler.schedulers.background import BackgroundScheduler
 from pyrogram import Client, filters, types
@@ -29,7 +30,7 @@ from youtubesearchpython import VideosSearch
 
 from client_init import create_app
 from config import (AUTHORIZED_USER, ENABLE_CELERY, ENABLE_VIP, OWNER,
-                    REQUIRED_MEMBERSHIP)
+                    REQUIRED_MEMBERSHIP, ZEE5_URL_FORMAT)
 from constant import BotText
 from db import InfluxDB, MySQL, Redis
 from limit import VIP, verify_payment
@@ -39,6 +40,7 @@ from tasks import (audio_entrance, direct_download_entrance, hot_patch,
 from utils import (auto_restart, customize_logger, get_revision,
                    get_user_settings, set_user_settings)
 from config import THUMBNAIL_LOCATION
+
 
 customize_logger(["pyrogram.client", "pyrogram.session.session", "pyrogram.connection.connection"])
 logging.getLogger('apscheduler.executors.default').propagate = False
@@ -63,7 +65,7 @@ def main_video_dl(client, message, url):
 
     logging.info("start %s", url)
 
-    if not re.findall(r"^https?://", url.lower()):
+    if not re.findall(r"^https?://", url.lower()) and "voot" not in url and "zee5" not in url:
         red.update_metrics("bad_request")
         message.reply_text("I think you should send me a link.", quote=True)
         return
@@ -79,19 +81,25 @@ def main_video_dl(client, message, url):
         # raise pyrogram.errors.exceptions.FloodWait(10)
         bot_msg: typing.Union["types.Message", "typing.Any"] = message.reply_text(text, quote=True)
     except pyrogram.errors.Flood as e:
-        f = BytesIO()
-        f.write(str(e).encode())
-        f.write(b"Your job will be done soon. Just wait! Don't rush.")
-        f.name = "Please don't flood me.txt"
-        bot_msg = message.reply_document(f, caption=f"Flood wait! Please wait {e.x} seconds...."
-                                                    f"Your job will start automatically", quote=True)
-        f.close()
-        client.send_message(OWNER, f"Flood wait! 🙁 {e.x} seconds....")
-        time.sleep(e.x)
-
+        bot_msg = _extracted_from_main_video_dl_25(e, message, client)
     client.send_chat_action(chat_id, 'upload_video')
     bot_msg.chat = message.chat
     ytdl_download_entrance(bot_msg, client, url)
+
+
+# TODO Rename this here and in `main_video_dl`
+def _extracted_from_main_video_dl_25(e, message, client):
+    f = BytesIO()
+    f.write(str(e).encode())
+    f.write(b"Your job will be done soon. Just wait! Don't rush.")
+    f.name = "Please don't flood me.txt"
+    result = message.reply_document(f, caption=f"Flood wait! Please wait {e.x} seconds...." f"Your job will start automatically", quote=True)
+
+    f.close()
+    client.send_message(OWNER, f"Flood wait! 🙁 {e.x} sccodds....")
+    time.sleep(e.x)
+
+    return result
 
     
 def private_use(func):
@@ -305,11 +313,11 @@ def vip_handler(client: "Client", message: "types.Message"):
 def playlist_handler(client: "Client", message: "types.Message"):
     cmd = message.command
     if len(cmd) == 1:
-        message.reply("/playlist hotstar_link") 
+        message.reply("/playlist link")
     if len(cmd) == 2:
         try:
-            link = cmd[1]
-            shell_cmd = f"yt-dlp -j --flat-playlist {link} --user-agent 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36' | jq -r .webpage_url"
+            input_link = cmd[1]
+            shell_cmd = f"yt-dlp -j --flat-playlist {input_link} --user-agent 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36' | jq -r .webpage_url"
             url_list = subprocess.run(shell_cmd, capture_output=True, shell=True)
             temp.CANCELLED[message.from_user.id] = False
             url_list = url_list.stdout
@@ -318,19 +326,29 @@ def playlist_handler(client: "Client", message: "types.Message"):
             start = 0
 
             with contextlib.suppress(Exception):
-                start = message.text.split()[2]
-            
+                start = int(cmd[2])
+
             playlist_links_len = len(playlist_links)
 
-            playlist_links = playlist_links[int(start)::]
-            
+            playlist_links = playlist_links[start:]
+
             editable = app.send_message(message.chat.id, "Processing playlist...", disable_web_page_preview=True)
             for i, link in enumerate(playlist_links):
-                editable.edit(f'Downloading {i+1 + int(start)} of {playlist_links_len}\n\n{link}', disable_web_page_preview=True)
+                if "zee5" in link:
+                    shell_cmd = f"yt-dlp --dump-json {link} --user-agent 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36' | jq -r .title"
+                    res = subprocess.run(shell_cmd, capture_output=True, shell=True)
+                    res = res.stdout
+                    res = res.decode("utf-8")
+                    slug = slugify(res)
+                    link = f'{input_link}/{slug}/{link.replace("zee5:", "")}'
+
+                editable.edit(f'Downloading {i + 1 + start} of {playlist_links_len}\n\n{link}', disable_web_page_preview=True)
+
                 try:
                     main_video_dl(client, message, link)
                 except Exception as e:
-                    print(e)
+                    exc_type, exc_value, exc_traceback = sys.exc_info()
+                    print(traceback.format_exception(exc_type, exc_value, exc_traceback))
                     time.sleep(60)
 
                 is_cancelled = temp.CANCELLED.get(message.from_user.id)

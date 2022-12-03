@@ -64,3 +64,5 @@ ENABLE_FFMPEG = os.getenv("ENABLE_FFMPEG", False)
 
 THUMBNAIL_LOCATION = "thumbnail"
 template = "{filename}.{quality}P.HS.WEB-DL.AAC2.0.H.265-{ _Rᴏʟᴇx_ } WEBDL_PRO_BOT.mkv"
+
+ZEE5_URL_FORMAT = "https://www.zee5.com/tv-shows/details/{show_slug}/{show_id}/{title_slug}/{web_url_code}"
