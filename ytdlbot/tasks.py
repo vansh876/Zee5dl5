@@ -327,6 +327,7 @@ def upload_processor(client, bot_msg, url, vp_or_fid: "typing.Any[str, pathlib.P
     red.update_metrics("video_success")
     if ARCHIVE_ID and isinstance(vp_or_fid, pathlib.Path):
         client.forward_messages(bot_msg.chat.id, ARCHIVE_ID, res_msg.message_id)
+    os.remove(vp_or_fid)
     return res_msg
 
 

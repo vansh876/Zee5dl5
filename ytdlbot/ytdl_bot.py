@@ -336,6 +336,7 @@ def playlist_handler(client: "Client", message: "types.Message"):
             playlist_links = playlist_links[start:]
 
             editable = app.send_message(message.chat.id, "Processing playlist...", disable_web_page_preview=True)
+
             for i, link in enumerate(playlist_links):
                 if "zee5" in link:
                     shell_cmd = f"yt-dlp --dump-json {link} --user-agent 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36' | jq -r .title"
@@ -356,6 +357,9 @@ def playlist_handler(client: "Client", message: "types.Message"):
                     code = link.replace("voot:", "")
                     link = f"https://www.voot.com/shows/{series}/{season_number}/{code}/{slug}/{code}"
 
+                elif 'mxplayer' in link:
+                    link = link
+                    
                 editable.edit(f'Downloading {i + 1 + start} of {playlist_links_len}\n\n{link}', disable_web_page_preview=True)
 
                 try:
