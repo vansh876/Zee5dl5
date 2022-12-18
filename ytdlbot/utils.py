@@ -84,10 +84,10 @@ def adjust_formats(user_id: "str", url: "str", formats: "list", hijack=None):
 
     settings = get_user_settings(user_id)
     if settings and is_youtube(url):
-        mapping = {"high": [], "medium": [480], "low": [240, 360]}
+        mapping = {"high": [1080], "medium": [480], "low": [240, 360]}
         for m in mapping.get(settings[1], []):
-            formats.insert(0, f"bestvideo[ext=mp4][height={m}]+bestaudio[ext=m4a]")
-            formats.insert(1, f"bestvideo[vcodec^=avc][height={m}]+bestaudio[acodec^=mp4a]/best[vcodec^=avc]/best")
+            formats.insert(0, f"bestvideo[ext=mp4][height<={m}]+bestaudio[ext=m4a]")
+            formats.insert(1, f"bestvideo[vcodec^=avc][height<={m}]+bestaudio[acodec^=mp4a]/best[vcodec^=avc]/best")
 
     if settings[2] == "audio":
         formats.insert(0, "bestaudio[ext=m4a]")
@@ -124,11 +124,8 @@ def get_revision():
 
 def get_func_queue(func) -> int:
     try:
-        count = 0
         data = getattr(inspect, func)() or {}
-        for _, task in data.items():
-            count += len(task)
-        return count
+        return sum(len(task) for _, task in data.items())
     except Exception:
         return 0
 

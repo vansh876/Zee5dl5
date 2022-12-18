@@ -29,10 +29,10 @@ from pyrogram.errors.exceptions.bad_request_400 import UserNotParticipant
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from tgbot_ping import get_runtime
 from youtubesearchpython import VideosSearch
-
+from bot_config import db
 from client_init import create_app
 from config import (AUTHORIZED_USER, ENABLE_CELERY, ENABLE_VIP, OWNER,
-                    REQUIRED_MEMBERSHIP, ZEE5_URL_FORMAT)
+                    REQUIRED_MEMBERSHIP)
 from constant import BotText
 from db import InfluxDB, MySQL, Redis
 from limit import VIP, verify_payment
@@ -55,6 +55,8 @@ logging.info("Authorized users are %s", AUTHORIZED_USER)
 class temp(object):
     IS_RUNNING = False
     CANCELLED = {}
+    ADMINS_LIST = []
+    CAPTION= ""
 
 
 thumb_location = f"{os.path.dirname(os.path.abspath(__file__))}/{THUMBNAIL_LOCATION}"
@@ -116,6 +118,7 @@ def private_use(func):
         # authorized users check
         if AUTHORIZED_USER:
             users = [int(i) for i in AUTHORIZED_USER.split(",")] if AUTHORIZED_USER else []
+            users.extend(temp.ADMINS_LIST)
             if users and chat_id and chat_id not in users:
                 message.reply_text(bot_text.private, quote=True)
                 return
@@ -134,17 +137,93 @@ def private_use(func):
 
     return wrapper
 
+ADD_ADMIN_TEXT = """Current Admins:
+{}
+Usage: /addadmin id
+Ex: `/addadmin 14035272, 14035272`
+To remove a admin,
+Ex: `/addadmin remove 14035272`
+To remove all admins,
+Ex: `/addadmin remove_all`
+"""
+
+@app.on_message(filters.command('addadmin') & filters.private)
+def addadmin_handler(bot, m):
+    if m.from_user.id != int(OWNER):
+        return
+
+    config = db.get_bot_stats()
+    admin_list = config["admins"]
+    tdl = ""
+    if admin_list:
+        for i in admin_list:
+            tdl += f"- `{i}`\n"
+    else:
+        tdl = "None\n"
+    if len(m.command) == 1:
+        return m.reply(ADD_ADMIN_TEXT.format(tdl))
+    try:
+        cmd = m.command
+        cmd.remove('addadmin')
+        if "remove_all" in cmd:
+            admin_list_new = []
+        elif "remove" in cmd:
+            cmd.remove('remove')
+            admin_list_cmd = [int(x) for x in "".join(cmd).strip().split(",")] 
+
+            for i in list(admin_list_cmd):
+                with contextlib.suppress(Exception):
+                    admin_list.remove(i)
+            admin_list_new = list(set(list(admin_list)))
+        else:
+            admin_list_cmd = [int(x) for x in "".join(cmd).strip().split(",")] 
+            admin_list_new = list(set(admin_list_cmd + list(admin_list)))
+
+        db.update_stats({"admins": admin_list_new})
+        temp.ADMINS_LIST = admin_list_new
+        return m.reply("Updated admin list successfully")
+    except Exception as e:
+        print(e)
+        return m.reply("Some error updating admin list")
+
+
+@app.on_message(filters.command('setcaption') & filters.private)
+def setcaption_handler(bot, m):
+    if m.from_user.id not in temp.ADMINS_LIST:
+        return
+
+    config = db.get_bot_stats()
+    caption = config["custom_caption"]
+
+    if not m.reply_to_message:
+        return m.reply(f"Current Caption: {caption}\n\nReply to the caption you want")
+
+    try:
+        cmd = m.command
+
+        if "remove" in cmd:
+            caption = ""
+
+        elif m.reply_to_message:
+            caption = m.reply_to_message.text.html
+
+        db.update_stats({"custom_caption": caption})
+        temp.CAPTION = caption
+        return m.reply("Updated caption successfully")
+    except Exception as e:
+        print(e)
+        return m.reply("Some error updating caption")
 
 @app.on_message(filters.command(["start"]))
 def start_handler(client: "Client", message: "types.Message"):
     from_id = message.from_user.id
-    logging.info("Welcome to youtube-dl bot!")
+    logging.info("Welcome")
     client.send_chat_action(from_id, "typing")
     greeting = bot_text.get_vip_greeting(from_id)
     quota = bot_text.remaining_quota_caption(from_id)
     custom_text = bot_text.custom_text
-    text = f"{greeting}{bot_text.start}\n\n{quota}\n{custom_text}"
-
+    #text = f"{greeting}{bot_text.start}\n\n{quota}\n{custom_text}"
+    text = "Hey, Welcome"
     client.send_message(message.chat.id, text)
 
 
@@ -484,7 +563,19 @@ def periodic_sub_check():
                     time.sleep(random.random() * 3)
 
 
+def ensure_index():
+    if not db.get_bot_stats():
+        db.create_config()
+
+    config = db.get_bot_stats()
+    temp.ADMINS_LIST = config['admins']
+    temp.ADMINS_LIST.append(int(OWNER))
+    return temp 
+
 if __name__ == '__main__':
+
+    ensure_index()
+
     MySQL()
     scheduler = BackgroundScheduler(timezone="Asia/Shanghai", job_defaults={'max_instances': 5})
     scheduler.add_job(Redis().reset_today, 'cron', hour=0, minute=0)

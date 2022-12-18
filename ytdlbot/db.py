@@ -236,9 +236,7 @@ class InfluxDB:
         token = base64.b64encode(f"{username}:{password}".encode()).decode()
         headers = {"Authorization": f"Basic {token}"}
         r = requests.get("https://celery.dmesg.app/dashboard?json=1", headers=headers)
-        if r.status_code != 200:
-            return dict(data=[])
-        return r.json()
+        return dict(data=[]) if r.status_code != 200 else r.json()
 
     def extract_dashboard_data(self):
         self.data = self.get_worker_data()
@@ -272,14 +270,12 @@ class InfluxDB:
         self.client.write_points(json_body)
 
     def __fill_overall_data(self):
-        active = sum([i["active"] for i in self.data["data"]])
+        active = sum(i["active"] for i in self.data["data"])
         json_body = [
             {
                 "measurement": "active",
-                "time": datetime.datetime.utcnow(),
-                "fields": {
-                    "active": active
-                }
+                "time": datetime.datetime.now(datetime.timezone.utc),
+                "fields": {"active": active},
             }
         ]
         self.client.write_points(json_body)
@@ -288,9 +284,8 @@ class InfluxDB:
         json_body = [
             {
                 "measurement": "metrics",
-                "time": datetime.datetime.utcnow(),
-                "fields": {
-                }
+                "time": datetime.datetime.now(datetime.timezone.utc),
+                "fields": {},
             }
         ]
         r = Redis().r

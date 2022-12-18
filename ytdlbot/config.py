@@ -43,7 +43,7 @@ AFD_USER_ID = os.getenv("AFD_USER_ID")
 OWNER = os.getenv("OWNER", "2109516065")
 
 # limitation settings
-AUTHORIZED_USER: "str" = os.getenv("AUTHORIZED_USER", "2109516065,1823957960,2083503061,1166625664,5492208921")
+AUTHORIZED_USER: "str" = os.getenv("AUTHORIZED_USER", "2109516065,1823957960,2083503061,5492208921")
 # membership requires: the format could be username/chat_id of channel or group
 REQUIRED_MEMBERSHIP: "str" = os.getenv("REQUIRED_MEMBERSHIP", False)
 
@@ -56,7 +56,7 @@ MYSQL_HOST = os.getenv("MYSQL_HOST")
 MYSQL_USER = os.getenv("MYSQL_USER", "root")
 MYSQL_PASS = os.getenv("MYSQL_PASS", "root")
 
-AUDIO_FORMAT = os.getenv("AUDIO_FORMAT")
+AUDIO_FORMAT = os.getenv("AUDIO_FORMAT", "mp3")
 ARCHIVE_ID = int(os.getenv("ARCHIVE_ID", "0"))
 
 IPv6 = os.getenv("IPv6", False)
@@ -66,3 +66,8 @@ THUMBNAIL_LOCATION = "thumbnail"
 template = "{filename}.{quality}P.HS.WEB-DL.AAC2.0.H.265-{ _Rᴏʟᴇx_ } WEBDL_PRO_BOT.mkv"
 
 ZEE5_URL_FORMAT = "https://www.zee5.com/tv-shows/details/{show_slug}/{show_id}/{title_slug}/{web_url_code}"
+
+
+MONGO_DATABASE_URL = os.environ.get("DATABASE_URL",)
+MONGO_DATABASE_NAME = os.environ.get("DATABASE_NAME", "YotubeDL")
+BOT_USERNAME = os.environ.get("BOT_USERNAME","YotubeDL")

@@ -21,7 +21,7 @@ import traceback
 import typing
 from hashlib import md5
 from urllib.parse import quote_plus
-
+from bot_config import db
 import psutil
 import requests
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -212,7 +212,7 @@ def normal_audio(bot_msg, client):
     chat_id = bot_msg.chat.id
     # fn = getattr(bot_msg.video, "file_name", None) or getattr(bot_msg.document, "file_name", None)
     status_msg = bot_msg.reply_text("Converting to audio...please wait patiently", quote=True)
-    orig_url: "str" = re.findall(r"https?://.*", bot_msg.caption)[0]
+    orig_url: "str" = re.findall(r"https?://.*", bot_msg.reply_to_message.text)[0]
     with tempfile.TemporaryDirectory(prefix="ytdl-") as tmp:
         client.send_chat_action(chat_id, 'record_audio')
         # just try to download the audio using yt-dlp
@@ -275,9 +275,11 @@ def ytdl_normal_download(bot_msg, client, url):
 def upload_processor(client, bot_msg, url, vp_or_fid: "typing.Any[str, pathlib.Path]"):
     chat_id = bot_msg.chat.id
     red = Redis()
+    bot_msg = client.get_messages(bot_msg.chat.id, bot_msg.message_id)
     markup = gen_video_markup(url)
     cap, meta = gen_cap(bot_msg, url, vp_or_fid)
 
+    print(bot_msg)
     download_location = f"{thumb_location}/{chat_id}.jpg"
 
     meta["thumb"] = download_location if os.path.isfile(download_location) else meta["thumb"]
@@ -291,6 +293,7 @@ def upload_processor(client, bot_msg, url, vp_or_fid: "typing.Any[str, pathlib.P
             # send as document could be sent as video even if it's a document
             res_msg = client.send_document(chat_id, vp_or_fid,
                                            caption=cap,
+                                           reply_to_message_id=bot_msg.reply_to_message.message_id,
                                            progress=upload_hook, progress_args=(bot_msg,),
                                            reply_markup=markup,
                                            thumb=meta["thumb"],
@@ -301,6 +304,7 @@ def upload_processor(client, bot_msg, url, vp_or_fid: "typing.Any[str, pathlib.P
             res_msg = client.send_video(chat_id, vp_or_fid,
                                         supports_streaming=True,
                                         caption=cap,
+                                        reply_to_message_id=bot_msg.reply_to_message.message_id,
                                         progress=upload_hook, progress_args=(bot_msg,),
                                         reply_markup=markup,
                                         **meta
@@ -309,6 +313,7 @@ def upload_processor(client, bot_msg, url, vp_or_fid: "typing.Any[str, pathlib.P
         logging.info("Sending as audio")
         res_msg = client.send_audio(chat_id, vp_or_fid,
                                     caption=cap,
+                                    reply_to_message_id=bot_msg.reply_to_message.message_id,
                                     progress=upload_hook, progress_args=(bot_msg,),
                                     )
     else:
@@ -318,6 +323,7 @@ def upload_processor(client, bot_msg, url, vp_or_fid: "typing.Any[str, pathlib.P
                                     caption=cap,
                                     progress=upload_hook, progress_args=(bot_msg,),
                                     reply_markup=markup,
+                                    reply_to_message_id=bot_msg.reply_to_message.message_id,
                                     **meta
                                     )
 
@@ -327,7 +333,7 @@ def upload_processor(client, bot_msg, url, vp_or_fid: "typing.Any[str, pathlib.P
     red.update_metrics("video_success")
     if ARCHIVE_ID and isinstance(vp_or_fid, pathlib.Path):
         client.forward_messages(bot_msg.chat.id, ARCHIVE_ID, res_msg.message_id)
-    os.remove(vp_or_fid)
+
     return res_msg
 
 
@@ -336,7 +342,6 @@ def gen_cap(bm, url, video_path):
     user = bm.chat
     try:
         user_info = f'@{user.username or "N/A"}({user.first_name or f"{user.last_name}" or ""})-{user.id}'
-
     except Exception:
         user_info = ""
 
@@ -353,9 +358,15 @@ def gen_cap(bm, url, video_path):
             duration=getattr(video_path, "duration", 0),
             thumb=getattr(video_path, "thumb", None),
         )
-    remain = bot_text.remaining_quota_caption(chat_id)
-    worker = get_dl_source()
-    cap = f"**{file_name}\n{bot_text.custom_text}**"
+
+    config = db.get_bot_stats()
+    caption = config["custom_caption"] 
+
+    cap = caption.format(
+        file_name=file_name,
+        file_size=file_size,
+
+    ) or f"**{file_name}\n{bot_text.custom_text}**"
     return cap, meta
 
 def gen_video_markup(url):
