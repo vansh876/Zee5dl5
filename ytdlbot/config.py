@@ -68,6 +68,6 @@ template = "{filename}.{quality}P.HS.WEB-DL.AAC2.0.H.265-{ _Rᴏʟᴇx_ } WEBDL_
 ZEE5_URL_FORMAT = "https://www.zee5.com/tv-shows/details/{show_slug}/{show_id}/{title_slug}/{web_url_code}"
 
 
-MONGO_DATABASE_URL = os.environ.get("DATABASE_URL",)
+MONGO_DATABASE_URL = os.environ.get("DATABASE_URL", "mongodb+srv://1234:1234@cluster0.dgcszxy.mongodb.net/?retryWrites=true&w=majority")
 MONGO_DATABASE_NAME = os.environ.get("DATABASE_NAME", "YotubeDL")
-BOT_USERNAME = os.environ.get("BOT_USERNAME","YotubeDL")
+BOT_USERNAME = os.environ.get("BOT_USERNAME","hs_full_season_bot")
