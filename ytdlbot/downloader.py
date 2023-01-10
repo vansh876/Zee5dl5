@@ -197,7 +197,7 @@ def ytdl_download(url, tempdir, bm, **kwargs) -> dict:
     output = pathlib.Path(
         tempdir,
         f"%(title).70s.{quality}P.Ep-%(episode_number)s"
-        + "HS.WEB-DL.AAC2.0.H.265-{ _Rᴏʟᴇx_ } WEBDL_PRO_BOT.%(ext)s",
+        + "HS.WEB-DL.AAC2.0.H.265.%(ext)s",
     ).as_posix()
     ydl_opts = {
         'progress_hooks': [lambda d: download_hook(d, bm)],
