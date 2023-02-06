@@ -110,11 +110,6 @@ def private_use(func):
     def wrapper(client: "Client", message: "types.Message"):
         chat_id = getattr(message.from_user, "id", None)
 
-        # message type check
-        if message.chat.type != "private" and not message.text.lower().startswith("/ytdl"):
-            logging.warning("%s, it's annoying me...🙄️ ", message.text)
-            return
-
         # authorized users check
         if AUTHORIZED_USER:
             users = [int(i) for i in AUTHORIZED_USER.split(",")] if AUTHORIZED_USER else []
@@ -417,24 +412,26 @@ def playlist_handler(client: "Client", message: "types.Message"):
             editable = app.send_message(message.chat.id, "Processing playlist...", disable_web_page_preview=True)
 
             for i, link in enumerate(playlist_links):
-                if "zee5" in link:
-                    shell_cmd = f"yt-dlp --dump-json {link} --user-agent 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36' | jq -r .title"
-                    res = subprocess.run(shell_cmd, capture_output=True, shell=True)
-                    res = res.stdout
-                    res = res.decode("utf-8")
-                    slug = slugify(res)
-                    link = f'{input_link}/{slug}/{link.replace("zee5:", "")}'
-                elif "voot" in link:
-                    shell_cmd = f"yt-dlp --dump-json {link} --user-agent 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36'"
-                    res = subprocess.run(shell_cmd, capture_output=True, shell=True)
-                    res = res.stdout
-                    res = res.decode("utf-8")
-                    res = json.loads(res)
-                    slug = slugify(res["episode"])
-                    season_number = res["season_number"]
-                    series = res["series"].lower()
-                    code = link.replace("voot:", "")
-                    link = f"https://www.voot.com/shows/{series}/{season_number}/{code}/{slug}/{code}"
+                # if "zee5" in link:
+                #     # shell_cmd = f"yt-dlp --dump-json {link} --user-agent 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36' | jq -r .title"
+                #     # res = subprocess.run(shell_cmd, capture_output=True, shell=True)
+                #     # res = res.stdout
+                #     # res = res.decode("utf-8")
+                #     # slug = slugify(res)
+                #     # link = f'{input_link}/{slug}/{link.replace("zee5:", "")}'
+                #     link = link
+                if "voot" in link:
+                    # shell_cmd = f"yt-dlp --dump-json {link} --user-agent 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36'"
+                    # res = subprocess.run(shell_cmd, capture_output=True, shell=True)
+                    # res = res.stdout
+                    # res = res.decode("utf-8")
+                    # res = json.loads(res)
+                    # slug = slugify(res["episode"])
+                    # season_number = res["season_number"]
+                    # series = res["series"].lower()
+                    # code = link.replace("voot:", "")
+                    # link = f"https://www.voot.com/shows/{series}/{season_number}/{code}/{slug}/{code}"
+                    link = link
 
                 elif 'mxplayer' in link:
                     link = link
@@ -444,9 +441,9 @@ def playlist_handler(client: "Client", message: "types.Message"):
                 try:
                     main_video_dl(client, message, link)
                 except Exception as e:
-                    exc_type, exc_value, exc_traceback = sys.exc_info()
-                    print(traceback.format_exception(exc_type, exc_value, exc_traceback))
+                    traceback.format_exc()
                     time.sleep(60)
+                    main_video_dl(client, message, link)
 
                 is_cancelled = temp.CANCELLED.get(message.from_user.id)
 

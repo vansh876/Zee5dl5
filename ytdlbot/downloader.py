@@ -206,9 +206,10 @@ def ytdl_download(url, tempdir, bm, **kwargs) -> dict:
         'quiet': True,
         "proxy": os.getenv("YTDL_PROXY")
     }
+
     formats = [
-        "bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio",
-        "bestvideo[vcodec^=avc]+bestaudio[acodec^=mp4a]/best[vcodec^=avc]/best",
+        f"bestvideo[ext=mp4][height<={quality}]+bestaudio/best[height<={quality}][ext=m4a]",
+        f"bestvideo[vcodec^=avc][height<={quality}]+bestaudio[acodec^=mp4a]/best[height<={quality}][vcodec^=avc]/best",
         None
     ]
     adjust_formats(chat_id, url, formats, hijack)
@@ -222,6 +223,7 @@ def ytdl_download(url, tempdir, bm, **kwargs) -> dict:
             ydl_opts["source_address"] = addr
             try:
                 logging.info("Downloading for %s with format %s", url, format_)
+                print(format_)
                 with ytdl.YoutubeDL(ydl_opts) as ydl:
                     ydl.download([url])
                 response["status"] = True

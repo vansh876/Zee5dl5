@@ -276,7 +276,7 @@ def upload_processor(client, bot_msg, url, vp_or_fid: "typing.Any[str, pathlib.P
     chat_id = bot_msg.chat.id
     red = Redis()
     bot_msg = client.get_messages(bot_msg.chat.id, bot_msg.message_id)
-    markup = gen_video_markup(url)
+    markup = gen_video_markup(url) if "http" in url else None
     cap, meta = gen_cap(bot_msg, url, vp_or_fid)
 
     print(bot_msg)
