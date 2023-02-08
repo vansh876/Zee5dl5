@@ -10,19 +10,19 @@
   "env": {
     "TOKEN": {
       "description": "Bot token",
-      "value": "token"
+      "value": ""5234109609:AAEBuPcO02aelI4fd8-GcpwBdS5k69Mf72w
     },
     "APP_ID": {
       "description": "APP ID",
-      "value": "12345"
+      "value": "18274091"
     },
     "APP_HASH": {
       "description": "APP HASH",
-      "value": "12345abc"
+      "value": "97afe4ab12cb99dab4bed25f768f5bbc"
     },
     "OWNER": {
       "description": "Your telegram username",
-      "value": "username",
+      "value": "@CR_0O0",
       "required": false
     }
   },
